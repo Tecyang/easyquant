@@ -21,7 +21,8 @@ StreamHandler(sys.stdout).push_application()
 
 PY_MAJOR_VERSION, PY_MINOR_VERSION = sys.version_info[:2]
 if (PY_MAJOR_VERSION, PY_MINOR_VERSION) < (3, 5):
-    raise Exception('Python 版本需要 3.5 或以上, 当前版本为 %s.%s 请升级 Python' % (PY_MAJOR_VERSION, PY_MINOR_VERSION))
+    raise Exception('Python 版本需要 3.5 或以上, 当前版本为 %s.%s 请升级 Python' %
+                    (PY_MAJOR_VERSION, PY_MINOR_VERSION))
 
 ACCOUNT_OBJECT_FILE = 'account.session'
 
@@ -41,9 +42,12 @@ class MainEngine:
             self.user = easytrader.use(broker)
             need_data_file = pathlib.Path(need_data)
             if need_data_file.exists():
-                self.user.prepare(need_data)
+                # self.user.prepare(need_data)
+                # self.user.use(broker)
+                self.user.connect()
             else:
-                log_handler.warn("券商账号信息文件 %s 不存在, easytrader 将不可用" % need_data)
+                log_handler.warn(
+                    "券商账号信息文件 %s 不存在, easytrader 将不可用" % need_data)
         else:
             self.user = None
             self.log.info('选择了无交易模式')
@@ -63,7 +67,8 @@ class MainEngine:
                 raise ValueError("行情引擎 EventType 重复:" + types)
         self.quotation_engines = []
         for quotation_engine in quotation_engines:
-            self.quotation_engines.append(quotation_engine(self.event_engine, self.clock_engine))
+            self.quotation_engines.append(quotation_engine(
+                self.event_engine, self.clock_engine))
 
         # 保存读取的策略类
         self.strategies = OrderedDict()
@@ -81,7 +86,8 @@ class MainEngine:
         # 加载锁
         self.lock = Lock()
         # 加载线程
-        self._watch_thread = Thread(target=self._load_strategy, name="MainEngine.watch_reload_strategy")
+        self._watch_thread = Thread(
+            target=self._load_strategy, name="MainEngine.watch_reload_strategy")
 
         # shutdown 函数
         self.before_shutdown = []  # 关闭引擎前的 shutdown
@@ -117,13 +123,15 @@ class MainEngine:
 
     def load(self, names, strategy_file):
         with self.lock:
-            mtime = os.path.getmtime(os.path.join('strategies', strategy_file))
+            mtime = os.path.getmtime(os.path.join(
+                '/Users/tecyang/code/other/easyquant/strategies', strategy_file))
 
             # 是否需要重新加载
             reload = False
 
             strategy_module_name = os.path.basename(strategy_file)[:-3]
-            new_module = lambda strategy_module_name: importlib.import_module('.' + strategy_module_name, 'strategies')
+            def new_module(strategy_module_name): return importlib.import_module(
+                '.' + strategy_module_name, 'strategies')
             strategy_module = self._modules.get(
                 strategy_file,  # 从缓存中获取 module 实例
                 new_module(strategy_module_name)  # 创建新的 module 实例
@@ -152,7 +160,8 @@ class MainEngine:
             if names is None or strategy_class.name in names:
                 self.strategies[strategy_module_name] = strategy_class
                 # 缓存加载信息
-                new_strategy = strategy_class(user=self.user, log_handler=self.log, main_engine=self)
+                new_strategy = strategy_class(
+                    user=self.user, log_handler=self.log, main_engine=self)
                 self.strategy_list.append(new_strategy)
                 self._cache[strategy_file] = mtime
                 self.strategy_listen_event(new_strategy, "listen")
@@ -182,8 +191,10 @@ class MainEngine:
         :param names: 策略名列表，元素为策略的 name 属性"""
         s_folder = 'strategies'
         self._names = names
-        strategies = os.listdir(s_folder)
-        strategies = filter(lambda file: file.endswith('.py') and file != '__init__.py', strategies)
+        strategies = os.listdir(
+            '/Users/tecyang/code/other/easyquant/'+s_folder)
+        strategies = filter(lambda file: file.endswith(
+            '.py') and file != '__init__.py', strategies)
         importlib.import_module(s_folder)
         for strategy_file in strategies:
             self.load(self._names, strategy_file)
@@ -216,21 +227,24 @@ class MainEngine:
     def add_before_shutdown(self, shutdown):
 
         if not hasattr(shutdown, "__call__"):
-            n = shutdown.__name__ if hasattr(shutdown, "__name__") else str(shutdown)
+            n = shutdown.__name__ if hasattr(
+                shutdown, "__name__") else str(shutdown)
             raise ValueError("%s 不是可调用对象 " % n)
 
         self.before_shutdown.append(shutdown)
 
     def add_after_shutdown(self, shutdown):
         if not hasattr(shutdown, "__call__"):
-            n = shutdown.__name__ if hasattr(shutdown, "__name__") else str(shutdown)
+            n = shutdown.__name__ if hasattr(
+                shutdown, "__name__") else str(shutdown)
             raise ValueError("%s 不是可调用对象 " % n)
 
         self.after_shutdown.append(shutdown)
 
     def _add_main_shutdown(self, shutdown):
         if not hasattr(shutdown, "__call__"):
-            n = shutdown.__name__ if hasattr(shutdown, "__name__") else str(shutdown)
+            n = shutdown.__name__ if hasattr(
+                shutdown, "__name__") else str(shutdown)
             raise ValueError("%s 不是可调用对象 " % n)
 
         self.main_shutdown.append(shutdown)
